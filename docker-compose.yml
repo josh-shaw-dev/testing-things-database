@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  db:
+    image: "mcr.microsoft.com/mssql/server"
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: "${DB_PASSWORD}"
+      ACCEPT_EULA: "Y"
+  db-setup:
+    image: "mcr.microsoft.com/mssql-tools"
+    entrypoint: /db_setup/entrypoint.sh
+    environment:
+      DB_HOST: "db"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_DATABASE: "${DB_DATABASE}"
+    volumes:
+      - ./db_setup:/db_setup
+    depends_on:
+      - db         
+  flyway:
+    image: flyway/flyway
+    command: -url=jdbc:sqlserver://db;databaseName=${DB_DATABASE};User=SA;Password=${DB_PASSWORD}; -validateMigrationNaming="true" -connectRetries=60 migrate
+    volumes:
+      - ./src:/flyway/sql
+    depends_on:
+      - db
+      - db-setup
